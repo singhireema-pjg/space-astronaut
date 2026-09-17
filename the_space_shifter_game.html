@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en" class="min-h-screen bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Space Shifter Game</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Orbitron', 'sans-serif'],
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float-gentle': 'float 4s ease-in-out infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-8px)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.8);
+    }
+    /* Glassmorphism styling */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .canvas-container {
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), inset 0 0 30px rgba(0, 0, 0, 0.5);
+    }
+    .blank-fill {
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans overflow-y-auto overflow-x-hidden selection:bg-indigo-500 selection:text-white pb-12">
+
+  <!-- Top Navigation Header -->
+  <header class="w-full glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-3 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 animate-pulse-slow">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+        </svg>
+      </div>
+      <div>
+        <h1 class="font-display font-bold text-lg lg:text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-fuchsia-400">
+          THE SPACE SHIFTER
+        </h1>
+        <p class="text-xs text-slate-400 hidden sm:block">Fill-in-the-Blanks Interactive Story Engine</p>
+      </div>
+    </div>
+
+    <!-- Quick Controls Header Actions -->
+    <div class="flex items-center space-x-2 sm:space-x-4">
+      <!-- Mode Badge -->
+      <span id="currentModeBadge" class="px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 transition-all duration-300">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+        <span id="modeBadgeText">Mode 1: Silly Story</span>
+      </span>
+
+      <!-- Audio Toggle Button -->
+      <button id="audioToggleBtn" title="Toggle Sound FX" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700 active:scale-95">
+        <svg id="audioOnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+        </svg>
+        <svg id="audioOffIcon" class="w-5 h-5 hidden text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+        </svg>
+      </button>
+
+      <!-- Reset Canvas View -->
+      <button id="resetCamBtn" title="Reset Astronaut Position" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition border border-slate-700 active:scale-95">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Grid Content -->
+  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 lg:p-6 max-w-[1920px] mx-auto w-full overflow-visible">
+    
+    <!-- LEFT PANEL: Dynamic Story Header & Interactive Space Canvas -->
+    <section class="lg:col-span-7 xl:col-span-8 flex flex-col space-y-4">
+      
+      <!-- Live Fill-in-the-Blank Story Sentence Banner -->
+      <div class="glass-panel rounded-2xl p-4 lg:p-5 border border-indigo-500/20 relative overflow-hidden group shrink-0">
+        <div class="absolute inset-0 bg-gradient-to-r from-indigo-900/20 via-purple-900/20 to-pink-900/20 opacity-70 group-hover:opacity-100 transition-opacity"></div>
+        <div class="relative z-10">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold tracking-widest text-indigo-400 uppercase font-display flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span> <span id="canvasTitleText">Mode 1 Canvas Preview</span>
+            </span>
+            <button id="copyStoryBtn" class="text-xs text-slate-400 hover:text-cyan-300 transition flex items-center gap-1 bg-slate-800/60 hover:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+              <span id="copyBtnText">Copy Story</span>
+            </button>
+          </div>
+
+          <!-- Master Fill-in-the-Blank Sentence -->
+          <p id="masterSentence" class="text-base sm:text-lg md:text-xl font-medium text-slate-100 leading-relaxed font-sans">
+            “The astronaut floated into the zero-gravity cabin and grabbed a giant 
+            <span id="highlightItem" class="inline-block px-3 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shadow-sm transition-all duration-300 min-w-[110px] text-center blank-fill">___________</span>. 
+            She looked at the approaching planet of 
+            <span id="highlightPlanet" class="inline-block px-3 py-0.5 rounded-lg bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40 shadow-sm transition-all duration-300 min-w-[110px] text-center blank-fill">___________</span> 
+            and whispered <span id="highlightDialogue" class="inline-block px-3 py-0.5 rounded-lg bg-pink-500/20 text-pink-300 font-bold border border-pink-500/40 italic shadow-sm transition-all duration-300 min-w-[130px] text-center blank-fill">“___________”</span>.”
+          </p>
+        </div>
+      </div>
+
+      <!-- Canvas Viewport Wrapper -->
+      <div class="glass-panel rounded-2xl overflow-hidden relative canvas-container flex flex-col justify-center items-center h-[380px] lg:h-[480px] border border-slate-800 shadow-2xl shrink-0">
+        <!-- Main Canvas element -->
+        <canvas id="spaceCanvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+
+        <!-- On-Canvas Guidance Overlay -->
+        <div class="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md border border-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-xl pointer-events-none flex items-center space-x-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Enter your words on the right • Switch modes to compare story changes</span>
+        </div>
+
+        <!-- Canvas Action Buttons Overlay -->
+        <div class="absolute top-3 right-3 flex flex-col space-y-2 z-10">
+          <button id="boostBtn" class="bg-indigo-600/80 hover:bg-indigo-500 active:scale-95 text-white px-3 py-2 rounded-xl backdrop-blur-md border border-indigo-400/40 shadow-lg transition-all text-xs font-semibold flex items-center space-x-1.5">
+            <svg class="w-4 h-4 text-cyan-300 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <span>Jetpack Boost</span>
+          </button>
+
+          <button id="warpBtn" class="bg-slate-800/80 hover:bg-slate-700 active:scale-95 text-cyan-300 px-3 py-2 rounded-xl backdrop-blur-md border border-slate-700 shadow-lg transition-all text-xs font-semibold flex items-center space-x-1.5">
+            <svg class="w-4 h-4 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+            </svg>
+            <span>Hyperdrive Warp</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: Story Fill-In Controls & Mode Selection -->
+    <section class="lg:col-span-5 xl:col-span-4 flex flex-col space-y-4 overflow-visible pb-8">
+      
+      <!-- Mode Selection Tabs (Mode 1 vs Mode 2) -->
+      <div class="glass-panel rounded-2xl p-4 border border-slate-800 shrink-0">
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-semibold uppercase tracking-wider text-slate-300 font-display">
+             Choose Mode to Fill In
+          </label>
+          <span class="text-[10px] text-indigo-400 font-mono">Clean Slate</span>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <button id="tabMode1Btn" class="px-3 py-3 rounded-xl bg-amber-500/20 border-2 border-amber-400 text-left transition active:scale-95">
+            <div class="text-xs font-bold text-amber-300 flex items-center justify-between">
+              <span>Mode 1: Silly Story</span>
+              <span>✨</span>
+            </div>
+            <div class="text-[10px] text-slate-300 mt-0.5">Playful Visual Atmosphere</div>
+          </button>
+
+          <button id="tabMode2Btn" class="px-3 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-left transition active:scale-95">
+            <div class="text-xs font-bold text-slate-400 flex items-center justify-between">
+              <span>Mode 2: Serious Story</span>
+              <span>📡</span>
+            </div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Sci-Fi Cosmic Atmosphere</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Interactive Fill-in-the-Blanks Form Panel -->
+      <div class="glass-panel rounded-2xl p-4 lg:p-5 border border-slate-800 space-y-4">
+        
+        <div class="border-b border-slate-800 pb-2 flex items-center justify-between">
+          <h2 id="inputSectionTitle" class="font-display font-semibold text-xs tracking-wider text-amber-300 uppercase flex items-center gap-1.5">
+            ✍️ Fill Blanks: Mode 1 (Silly Story)
+          </h2>
+          <span id="modeStatusTag" class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">Active Mode</span>
+        </div>
+
+        <!-- Blank 1: Held Item -->
+        <div class="relative z-10">
+          <label for="itemInput" class="block text-xs font-semibold text-amber-300 uppercase tracking-wider mb-1.5">
+            <span>Blank 1: What is the astronaut holding?</span>
+          </label>
+          <input type="text" id="itemInput" value="" placeholder="Type object here..."
+            class="w-full bg-slate-900 border border-slate-700 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/50 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition cursor-text" />
+        </div>
+
+        <!-- Blank 2: Planet Name -->
+        <div class="relative z-10">
+          <label for="planetInput" class="block text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-1.5">
+            <span>Blank 2: Name of the planet</span>
+          </label>
+          <input type="text" id="planetInput" value="" placeholder="Type planet name here..."
+            class="w-full bg-slate-900 border border-slate-700 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/50 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition cursor-text" />
+          <p class="text-[10px] text-slate-400 mt-1">
+            * The colors and texture of the planet will automatically change based on the name you type!
+          </p>
+        </div>
+
+        <!-- Blank 3: Dialogue -->
+        <div class="relative z-10">
+          <label for="dialogueInput" class="block text-xs font-semibold text-pink-300 uppercase tracking-wider mb-1.5">
+            <span>Blank 3: What does the astronaut say?</span>
+          </label>
+          <input type="text" id="dialogueInput" value="" placeholder="Type spoken quote here..."
+            class="w-full bg-slate-900 border border-slate-700 focus:border-pink-400 focus:ring-2 focus:ring-pink-400/50 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition cursor-text" />
+        </div>
+
+        <!-- Action Controls for Cleardown / Comparison -->
+        <div class="pt-2 border-t border-slate-800 flex gap-2">
+          <button id="clearCurrentBtn" class="flex-1 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 text-xs font-medium flex items-center justify-center gap-1.5 transition active:scale-95">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+            <span>Clear Fields</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Side-by-Side Story Comparison Card -->
+      <div class="glass-panel rounded-2xl p-4 border border-slate-800 space-y-3 shrink-0">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold uppercase tracking-wider text-slate-300 font-display">
+            📖 Your Story Comparison
+          </label>
+          <span class="text-[10px] text-slate-400 font-mono">See Difference</span>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <!-- Story 1 Summary -->
+          <div id="story1SummaryCard" class="p-2.5 rounded-xl bg-amber-950/30 border border-amber-500/30 text-amber-200">
+            <div class="font-bold text-[11px] text-amber-400 mb-0.5 flex justify-between">
+              <span>Mode 1 (Silly Story):</span>
+              <button id="quickJump1" class="underline text-[10px] hover:text-amber-100">View in Canvas</button>
+            </div>
+            <p id="summaryText1" class="text-slate-300 italic">“The astronaut floated into the zero-gravity cabin and grabbed a giant ________. She looked at the approaching planet of ________ and whispered “________”.”</p>
+          </div>
+
+          <!-- Story 2 Summary -->
+          <div id="story2SummaryCard" class="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 text-cyan-200">
+            <div class="font-bold text-[11px] text-cyan-400 mb-0.5 flex justify-between">
+              <span>Mode 2 (Serious Story):</span>
+              <button id="quickJump2" class="underline text-[10px] hover:text-cyan-100">View in Canvas</button>
+            </div>
+            <p id="summaryText2" class="text-slate-300 italic">“The astronaut floated into the zero-gravity cabin and grabbed a giant ________. She looked at the approaching planet of ________ and whispered “________”.”</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Engine Controls -->
+      <div class="glass-panel rounded-2xl p-4 border border-slate-800 space-y-3 shrink-0">
+        <label class="text-xs font-semibold uppercase tracking-wider text-slate-400 font-display block">
+          ⚙️ Zero-G Physics & Orbit Tuning
+        </label>
+        
+        <!-- Speed Slider -->
+        <div class="space-y-1">
+          <div class="flex justify-between text-xs text-slate-300">
+            <span>Starfield Speed</span>
+            <span id="speedVal" class="font-mono text-cyan-400">1.0x</span>
+          </div>
+          <input id="speedSlider" type="range" min="0.2" max="3.0" step="0.1" value="1.0" class="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg" />
+        </div>
+
+        <!-- Planet Ring Scale Slider -->
+        <div class="space-y-1">
+          <div class="flex justify-between text-xs text-slate-300">
+            <span>Planet Ring Scale</span>
+            <span id="ringVal" class="font-mono text-cyan-400">Normal</span>
+          </div>
+          <input id="ringSlider" type="range" min="0" max="2" step="1" value="1" class="w-full accent-cyan-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg" />
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <script>
+    // --- APP STATE ---
+    const state = {
+      activeMode: "mode1", // "mode1" or "mode2"
+      stories: {
+        mode1: { item: "", planet: "", dialogue: "" },
+        mode2: { item: "", planet: "", dialogue: "" }
+      },
+      soundEnabled: true,
+      starSpeed: 1.0,
+      ringScale: 1, // 0 = none, 1 = normal, 2 = massive
+      astroPos: { x: 0, y: 0 },
+      astroTarget: { x: 0, y: 0 },
+      astroVel: { x: 0, y: 0 },
+      isDraggingAstro: false,
+      dragOffset: { x: 0, y: 0 },
+      boostActive: false,
+      warpActive: false,
+      warpTime: 0,
+      planetSeed: 0
+    };
+
+    // --- SOUND EFFECTS (Web Audio API Synthesizer) ---
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(type) {
+      if (!state.soundEnabled) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'boost') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(120, now);
+          osc.frequency.linearRampToValueAtTime(320, now + 0.25);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else if (type === 'shift') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === 'warp') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(200, now);
+          osc.frequency.exponentialRampToValueAtTime(1200, now + 0.5);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        }
+      } catch (e) {
+        console.warn("Audio Context blocked or uninitialized", e);
+      }
+    }
+
+    // --- HELPER: String Seed Hash for Dynamic Planet Visuals ---
+    function hashString(str) {
+      let hash = 0;
+      if (!str || str.trim().length === 0) return 42;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    }
+
+    // Generate planet color parameters derived from Planet Name
+    function getPlanetParams(planetName) {
+      const seed = hashString(planetName.toLowerCase().trim() || "blank");
+      
+      const baseHue = seed % 360;
+      const secondaryHue = (baseHue + 40 + (seed % 120)) % 360;
+      const atmosphereHue = (baseHue + 180 + (seed % 60)) % 360;
+      
+      const patternType = seed % 4;
+      const hasRings = (seed % 3) !== 0;
+      
+      return {
+        seed,
+        baseHue,
+        secondaryHue,
+        atmosphereHue,
+        patternType,
+        hasRings,
+        sat: 65 + (seed % 30),
+        light: 45 + (seed % 20)
+      };
+    }
+
+    // --- CANVAS ENGINE SETUP ---
+    const canvas = document.getElementById('spaceCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = 0;
+    let height = 0;
+
+    const stars = [];
+    const ambientItems = [];
+    const pulseRipples = [];
+
+    function initStars() {
+      stars.length = 0;
+      const starCount = Math.floor((width * height) / 3000);
+      for (let i = 0; i < starCount; i++) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          z: Math.random() * 2 + 0.5,
+          size: Math.random() * 2 + 0.5,
+          alpha: Math.random() * 0.8 + 0.2,
+          twinkleSpeed: Math.random() * 0.03 + 0.005
+        });
+      }
+    }
+
+    function initAmbientParticles() {
+      ambientItems.length = 0;
+      for (let i = 0; i < 20; i++) {
+        ambientItems.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 0.8,
+          vy: (Math.random() - 0.5) * 0.8,
+          rot: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.03,
+          size: Math.random() * 8 + 4
+        });
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      width = canvas.width;
+      height = canvas.height;
+
+      if (state.astroPos.x === 0 && state.astroPos.y === 0) {
+        state.astroPos.x = width * 0.35;
+        state.astroPos.y = height * 0.5;
+        state.astroTarget.x = state.astroPos.x;
+        state.astroTarget.y = state.astroPos.y;
+      }
+
+      initStars();
+      initAmbientParticles();
+    }
+
+    // --- RENDERING MODULES ---
+
+    // Render Dynamic Background Planet
+    function drawPlanet(pParams) {
+      const pX = width * 0.75;
+      const pY = height * 0.45;
+      const radius = Math.min(width, height) * 0.24;
+
+      ctx.save();
+
+      // Atmosphere Glow
+      const atmosGrad = ctx.createRadialGradient(pX, pY, radius * 0.95, pX, pY, radius * 1.35);
+      atmosGrad.addColorStop(0, `hsla(${pParams.atmosphereHue}, 80%, 60%, 0.35)`);
+      atmosGrad.addColorStop(0.5, `hsla(${pParams.atmosphereHue}, 70%, 50%, 0.15)`);
+      atmosGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      
+      ctx.beginPath();
+      ctx.arc(pX, pY, radius * 1.4, 0, Math.PI * 2);
+      ctx.fillStyle = atmosGrad;
+      ctx.fill();
+
+      // Back Half of Rings
+      if (pParams.hasRings && state.ringScale > 0) {
+        drawRings(pX, pY, radius, pParams, 'back');
+      }
+
+      // Planet Sphere Base
+      ctx.beginPath();
+      ctx.arc(pX, pY, radius, 0, Math.PI * 2);
+      ctx.clip();
+
+      const sphereGrad = ctx.createRadialGradient(
+        pX - radius * 0.35, pY - radius * 0.35, radius * 0.1,
+        pX, pY, radius
+      );
+      sphereGrad.addColorStop(0, `hsl(${pParams.baseHue}, ${pParams.sat}%, ${pParams.light + 15}%)`);
+      sphereGrad.addColorStop(0.6, `hsl(${pParams.baseHue}, ${pParams.sat}%, ${pParams.light - 10}%)`);
+      sphereGrad.addColorStop(1, `hsl(${pParams.baseHue}, ${pParams.sat + 10}%, 10%)`);
+
+      ctx.fillStyle = sphereGrad;
+      ctx.fill();
+
+      // Surface Patterns
+      ctx.save();
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.globalAlpha = 0.6;
+
+      const time = Date.now() * 0.0003;
+
+      if (pParams.patternType === 0) {
+        for (let i = -radius; i < radius; i += 18) {
+          ctx.fillStyle = `hsl(${(pParams.secondaryHue + i) % 360}, ${pParams.sat}%, 40%)`;
+          ctx.beginPath();
+          const waveY = pY + i + Math.sin(time + i) * 6;
+          ctx.rect(pX - radius * 1.2, waveY, radius * 2.4, 9);
+          ctx.fill();
+        }
+      } else if (pParams.patternType === 1) {
+        ctx.fillStyle = `hsl(${pParams.secondaryHue}, 90%, 70%)`;
+        const count = 12;
+        for (let i = 0; i < count; i++) {
+          const angle = (i / count) * Math.PI * 2 + time * 0.2;
+          const dist = (i % 3 + 1) * (radius * 0.25);
+          const cx = pX + Math.cos(angle) * dist;
+          const cy = pY + Math.sin(angle) * dist;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius * 0.18, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (pParams.patternType === 2) {
+        ctx.strokeStyle = `hsl(${pParams.secondaryHue}, 80%, 65%)`;
+        ctx.lineWidth = 12;
+        for (let r = 20; r < radius; r += 28) {
+          ctx.beginPath();
+          ctx.arc(pX, pY, r, time + r, time + r + Math.PI * 1.2);
+          ctx.stroke();
+        }
+      } else {
+        ctx.fillStyle = `hsl(${pParams.secondaryHue}, 85%, 35%)`;
+        const seedVal = pParams.seed;
+        for (let c = 0; c < 7; c++) {
+          const cx = pX + Math.cos(seedVal + c * 1.8) * (radius * 0.5);
+          const cy = pY + Math.sin(seedVal + c * 2.3) * (radius * 0.5);
+          ctx.beginPath();
+          ctx.arc(cx, cy, 14 + (c % 4) * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+
+      // Night Shadow Curve
+      const shadowGrad = ctx.createRadialGradient(
+        pX + radius * 0.4, pY + radius * 0.4, radius * 0.3,
+        pX, pY, radius * 1.05
+      );
+      shadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
+      shadowGrad.addColorStop(0.7, 'rgba(0, 0, 0, 0.4)');
+      shadowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.fillStyle = shadowGrad;
+      ctx.beginPath();
+      ctx.arc(pX, pY, radius + 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+
+      // Front Half of Rings
+      if (pParams.hasRings && state.ringScale > 0) {
+        drawRings(pX, pY, radius, pParams, 'front');
+      }
+    }
+
+    function drawRings(pX, pY, radius, pParams, pass) {
+      ctx.save();
+      ctx.translate(pX, pY);
+      ctx.rotate(-0.35);
+
+      const ringInner = radius * 1.25 * (state.ringScale === 2 ? 1.3 : 1.0);
+      const ringOuter = radius * 1.75 * (state.ringScale === 2 ? 1.4 : 1.0);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, ringOuter, ringOuter * 0.28, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, ringInner, ringInner * 0.28, 0, 0, Math.PI * 2, true);
+
+      if (pass === 'back') {
+        ctx.rect(-ringOuter * 1.5, -ringOuter, ringOuter * 3, ringOuter);
+      } else {
+        ctx.rect(-ringOuter * 1.5, 0, ringOuter * 3, ringOuter);
+      }
+      ctx.clip();
+
+      const ringGrad = ctx.createLinearGradient(-ringOuter, 0, ringOuter, 0);
+      ringGrad.addColorStop(0, `hsla(${pParams.secondaryHue}, 70%, 60%, 0.1)`);
+      ringGrad.addColorStop(0.3, `hsla(${pParams.baseHue}, 80%, 70%, 0.7)`);
+      ringGrad.addColorStop(0.6, `hsla(${pParams.secondaryHue}, 90%, 80%, 0.9)`);
+      ringGrad.addColorStop(1, `hsla(${pParams.atmosphereHue}, 70%, 50%, 0.2)`);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, ringOuter, ringOuter * 0.28, 0, 0, Math.PI * 2);
+      ctx.fillStyle = ringGrad;
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // --- DRAW ASTRONAUT & HELD ITEM ---
+    function drawAstronaut(x, y, time) {
+      const activeData = state.stories[state.activeMode];
+      const isSerious = state.activeMode === 'mode2';
+
+      ctx.save();
+      ctx.translate(x, y);
+
+      const floatAngle = Math.sin(time * 1.5) * 0.08;
+      ctx.rotate(floatAngle);
+
+      // Jetpack thruster flame
+      if (state.boostActive || state.warpActive) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(-28, 10);
+        ctx.lineTo(-50 - Math.random() * 20, 10 + (Math.random() - 0.5) * 10);
+        ctx.lineTo(-28, 20);
+        ctx.fillStyle = isSerious ? '#38bdf8' : '#f59e0b';
+        ctx.shadowColor = isSerious ? '#38bdf8' : '#f59e0b';
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Jetpack
+      ctx.fillStyle = '#334155';
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-34, -22, 16, 38, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      // Suit
+      ctx.fillStyle = '#f8fafc';
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-22, -26, 44, 52, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      // Suit Chest Patch
+      ctx.fillStyle = isSerious ? '#0284c7' : '#d97706';
+      ctx.beginPath();
+      ctx.roundRect(-12, -14, 24, 12, 4);
+      ctx.fill();
+
+      // Visor
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.ellipse(4, -12, 16, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const visorGrad = ctx.createLinearGradient(-6, -20, 14, -4);
+      visorGrad.addColorStop(0, 'rgba(56, 189, 248, 0.8)');
+      visorGrad.addColorStop(0.5, 'rgba(168, 85, 247, 0.4)');
+      visorGrad.addColorStop(1, 'rgba(255, 255, 255, 0.1)');
+      ctx.fillStyle = visorGrad;
+      ctx.beginPath();
+      ctx.ellipse(4, -12, 14, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Arms
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.ellipse(-18, 2, 8, 14, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.ellipse(18, 6, 8, 14, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // DRAW HELD ITEM
+      drawHeldItem(28, 10, activeData.item.toLowerCase().trim());
+
+      // SPEECH BUBBLE DIALOGUE
+      const dialogueText = activeData.dialogue.trim() ? `“${activeData.dialogue.trim()}”` : "“___________”";
+      ctx.save();
+      ctx.translate(15, -45);
+      ctx.font = 'bold 12px Inter, sans-serif';
+      const textWidth = ctx.measureText(dialogueText).width;
+      const padX = 10;
+      const padY = 6;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.strokeStyle = isSerious ? '#38bdf8' : '#f59e0b';
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      ctx.roundRect(-padX, -16 - padY, textWidth + padX * 2, 22 + padY, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      // Pointer triangle
+      ctx.beginPath();
+      ctx.moveTo(-2, 2);
+      ctx.lineTo(-8, 8);
+      ctx.lineTo(6, 2);
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.fill();
+
+      ctx.fillStyle = isSerious ? '#38bdf8' : '#fde047';
+      ctx.fillText(dialogueText, 0, -6);
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    // Procedural Item Renderer in Astronaut Hand
+    function drawHeldItem(x, y, itemName) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      if (!itemName) {
+        // Blank item placeholder ring in hand
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (itemName.includes('spoon')) {
+        ctx.rotate(-0.2);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(-2, -18, 4, 26);
+        ctx.beginPath();
+        ctx.ellipse(0, -22, 9, 13, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fill();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.stroke();
+      } else if (itemName.includes('scanner') || itemName.includes('beacon') || itemName.includes('sensor')) {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-4, -10, 12, 20);
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(-2, -8, 8, 8);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(2, -10);
+        ctx.lineTo(2, -18);
+        ctx.stroke();
+      } else if (itemName.includes('wrench') || itemName.includes('tool')) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(-2, -12, 5, 22);
+        ctx.beginPath();
+        ctx.arc(0, -14, 6, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (itemName.includes('pizza')) {
+        ctx.beginPath();
+        ctx.moveTo(0, 10);
+        ctx.lineTo(16, -14);
+        ctx.lineTo(-10, -14);
+        ctx.closePath();
+        ctx.fillStyle = '#f59e0b';
+        ctx.fill();
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(-12, -18, 30, 5);
+      } else if (itemName.includes('duck')) {
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.arc(6, -8, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(10, -9, 5, 3);
+      } else {
+        // Generic customized object glowing sphere
+        ctx.fillStyle = state.activeMode === 'mode2' ? '#0ea5e9' : '#a855f7';
+        ctx.beginPath();
+        ctx.arc(0, 0, 9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    // --- MAIN CANVAS ANIMATION LOOP ---
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const time = Date.now() * 0.001;
+
+      // Clear Canvas
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, width, height);
+
+      const activeStory = state.stories[state.activeMode];
+
+      // Starfield rendering
+      const speedMult = state.starSpeed * (state.warpActive ? 8.0 : 1.0);
+      ctx.fillStyle = state.activeMode === 'mode2' ? '#e0f2fe' : '#ffffff';
+
+      stars.forEach(s => {
+        s.x -= s.z * 0.5 * speedMult;
+        if (s.x < 0) s.x = width;
+
+        const twinkle = Math.sin(time * s.twinkleSpeed * 10) * 0.3 + 0.7;
+        ctx.globalAlpha = s.alpha * twinkle;
+
+        if (state.warpActive) {
+          ctx.strokeStyle = state.activeMode === 'mode2' ? '#38bdf8' : '#f59e0b';
+          ctx.lineWidth = s.size;
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(s.x + 30 * s.z, s.y);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      ctx.globalAlpha = 1.0;
+
+      // Planet
+      const pParams = getPlanetParams(activeStory.planet);
+      drawPlanet(pParams);
+
+      // Ambient motes
+      ambientItems.forEach(p => {
+        p.x += p.vx * speedMult;
+        p.y += p.vy;
+
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+        if (p.y < 0) p.y = height;
+        if (p.y > height) p.y = 0;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.globalAlpha = 0.3;
+
+        if (state.activeMode === 'mode1') {
+          ctx.fillStyle = '#fde047';
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        } else {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        }
+        ctx.restore();
+      });
+
+      // Pulse ripples
+      for (let i = pulseRipples.length - 1; i >= 0; i--) {
+        const pr = pulseRipples[i];
+        pr.radius += 3;
+        pr.alpha -= 0.02;
+
+        if (pr.alpha <= 0) {
+          pulseRipples.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, pr.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(56, 189, 248, ${pr.alpha})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Astronaut Zero-G Physics
+      if (!state.isDraggingAstro) {
+        state.astroPos.x += (state.astroTarget.x - state.astroPos.x) * 0.05;
+        state.astroPos.y += (state.astroTarget.y - state.astroPos.y) * 0.05;
+        state.astroPos.y += Math.sin(time * 2) * 0.4;
+      }
+
+      drawAstronaut(state.astroPos.x, state.astroPos.y, time);
+    }
+
+    // --- UI REAL-TIME SYNC & CONTROLS ---
+
+    const itemInput = document.getElementById('itemInput');
+    const planetInput = document.getElementById('planetInput');
+    const dialogueInput = document.getElementById('dialogueInput');
+
+    const highlightItem = document.getElementById('highlightItem');
+    const highlightPlanet = document.getElementById('highlightPlanet');
+    const highlightDialogue = document.getElementById('highlightDialogue');
+
+    function formatSentence(data) {
+      const itemStr = data.item.trim() || "___________";
+      const planetStr = data.planet.trim() || "___________";
+      const dialogueStr = data.dialogue.trim() ? `“${data.dialogue.trim()}”` : "“___________”";
+      return `“The astronaut floated into the zero-gravity cabin and grabbed a giant ${itemStr}. She looked at the approaching planet of ${planetStr} and whispered ${dialogueStr}.”`;
+    }
+
+    function syncUI() {
+      // Save input fields into active state slot
+      state.stories[state.activeMode].item = itemInput.value;
+      state.stories[state.activeMode].planet = planetInput.value;
+      state.stories[state.activeMode].dialogue = dialogueInput.value;
+
+      const activeData = state.stories[state.activeMode];
+
+      // Update Canvas Sentence Highlights
+      highlightItem.textContent = activeData.item.trim() !== "" ? activeData.item : "___________";
+      highlightPlanet.textContent = activeData.planet.trim() !== "" ? activeData.planet : "___________";
+      highlightDialogue.textContent = activeData.dialogue.trim() !== "" ? `“${activeData.dialogue.trim()}”` : "“___________”";
+
+      // Update Summaries
+      document.getElementById('summaryText1').textContent = formatSentence(state.stories.mode1);
+      document.getElementById('summaryText2').textContent = formatSentence(state.stories.mode2);
+    }
+
+    function switchMode(targetMode) {
+      state.activeMode = targetMode;
+      playSound('shift');
+
+      const isMode1 = targetMode === 'mode1';
+
+      // Update Tab Styles
+      const tab1 = document.getElementById('tabMode1Btn');
+      const tab2 = document.getElementById('tabMode2Btn');
+
+      if (isMode1) {
+        tab1.className = "px-3 py-3 rounded-xl bg-amber-500/20 border-2 border-amber-400 text-left transition active:scale-95";
+        tab1.querySelector('div').className = "text-xs font-bold text-amber-300 flex items-center justify-between";
+        tab1.querySelectorAll('div')[1].className = "text-[10px] text-slate-300 mt-0.5";
+
+        tab2.className = "px-3 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-left transition active:scale-95";
+        tab2.querySelector('div').className = "text-xs font-bold text-slate-400 flex items-center justify-between";
+        tab2.querySelectorAll('div')[1].className = "text-[10px] text-slate-500 mt-0.5";
+      } else {
+        tab2.className = "px-3 py-3 rounded-xl bg-cyan-500/20 border-2 border-cyan-400 text-left transition active:scale-95";
+        tab2.querySelector('div').className = "text-xs font-bold text-cyan-300 flex items-center justify-between";
+        tab2.querySelectorAll('div')[1].className = "text-[10px] text-slate-300 mt-0.5";
+
+        tab1.className = "px-3 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-left transition active:scale-95";
+        tab1.querySelector('div').className = "text-xs font-bold text-slate-400 flex items-center justify-between";
+        tab1.querySelectorAll('div')[1].className = "text-[10px] text-slate-500 mt-0.5";
+      }
+
+      // Update Top Header Badge
+      const badgeText = document.getElementById('modeBadgeText');
+      const badge = document.getElementById('currentModeBadge');
+      const canvasTitle = document.getElementById('canvasTitleText');
+      const sectionTitle = document.getElementById('inputSectionTitle');
+      const statusTag = document.getElementById('modeStatusTag');
+
+      if (isMode1) {
+        badgeText.textContent = "Mode 1: Silly Story";
+        badge.className = "px-3 py-1 rounded-full text-xs font-semibold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1.5";
+        canvasTitle.textContent = "Mode 1 (Silly Story) Canvas Preview";
+        sectionTitle.textContent = "✍️ Fill Blanks: Mode 1 (Silly Story)";
+        sectionTitle.className = "font-display font-semibold text-xs tracking-wider text-amber-300 uppercase flex items-center gap-1.5";
+        statusTag.className = "text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30";
+      } else {
+        badgeText.textContent = "Mode 2: Serious Story";
+        badge.className = "px-3 py-1 rounded-full text-xs font-semibold uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1.5";
+        canvasTitle.textContent = "Mode 2 (Serious Story) Canvas Preview";
+        sectionTitle.textContent = "✍️ Fill Blanks: Mode 2 (Serious Story)";
+        sectionTitle.className = "font-display font-semibold text-xs tracking-wider text-cyan-300 uppercase flex items-center gap-1.5";
+        statusTag.className = "text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-500/30";
+      }
+
+      // Load Inputs for active mode
+      const activeData = state.stories[targetMode];
+      itemInput.value = activeData.item;
+      planetInput.value = activeData.planet;
+      dialogueInput.value = activeData.dialogue;
+
+      syncUI();
+    }
+
+    // Listeners for Tab Buttons
+    document.getElementById('tabMode1Btn').addEventListener('click', () => switchMode('mode1'));
+    document.getElementById('tabMode2Btn').addEventListener('click', () => switchMode('mode2'));
+    document.getElementById('quickJump1').addEventListener('click', () => switchMode('mode1'));
+    document.getElementById('quickJump2').addEventListener('click', () => switchMode('mode2'));
+
+    // Input Listeners
+    [itemInput, planetInput, dialogueInput].forEach(input => {
+      input.addEventListener('input', () => {
+        syncUI();
+        playSound('shift');
+      });
+    });
+
+    // Clear Button
+    document.getElementById('clearCurrentBtn').addEventListener('click', () => {
+      itemInput.value = "";
+      planetInput.value = "";
+      dialogueInput.value = "";
+      syncUI();
+      playSound('click');
+    });
+
+    // Sliders
+    const speedSlider = document.getElementById('speedSlider');
+    speedSlider.addEventListener('input', (e) => {
+      state.starSpeed = parseFloat(e.target.value);
+      document.getElementById('speedVal').textContent = `${state.starSpeed.toFixed(1)}x`;
+    });
+
+    const ringSlider = document.getElementById('ringSlider');
+    ringSlider.addEventListener('input', (e) => {
+      state.ringScale = parseInt(e.target.value);
+      const labels = ['None', 'Normal', 'Massive'];
+      document.getElementById('ringVal').textContent = labels[state.ringScale];
+    });
+
+    // Header Actions
+    document.getElementById('audioToggleBtn').addEventListener('click', () => {
+      state.soundEnabled = !state.soundEnabled;
+      document.getElementById('audioOnIcon').classList.toggle('hidden', !state.soundEnabled);
+      document.getElementById('audioOffIcon').classList.toggle('hidden', state.soundEnabled);
+    });
+
+    document.getElementById('resetCamBtn').addEventListener('click', () => {
+      state.astroTarget.x = width * 0.35;
+      state.astroTarget.y = height * 0.5;
+      playSound('click');
+    });
+
+    document.getElementById('copyStoryBtn').addEventListener('click', () => {
+      const activeData = state.stories[state.activeMode];
+      const fullSentence = formatSentence(activeData);
+      
+      const dummy = document.createElement("textarea");
+      document.body.appendChild(dummy);
+      dummy.value = fullSentence;
+      dummy.select();
+      document.execCommand("copy");
+      document.body.removeChild(dummy);
+
+      const copyText = document.getElementById('copyBtnText');
+      copyText.textContent = "Copied!";
+      setTimeout(() => copyText.textContent = "Copy Story", 2000);
+      playSound('click');
+    });
+
+    // Canvas Boost & Warp Overlay
+    document.getElementById('boostBtn').addEventListener('click', () => {
+      state.boostActive = true;
+      playSound('boost');
+      setTimeout(() => state.boostActive = false, 1200);
+    });
+
+    document.getElementById('warpBtn').addEventListener('click', () => {
+      state.warpActive = true;
+      playSound('warp');
+      setTimeout(() => state.warpActive = false, 1800);
+    });
+
+    // INTERACTIVE CANVAS DRAG & CLICK EVENTS
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      const dx = mx - state.astroPos.x;
+      const dy = my - state.astroPos.y;
+      if (Math.hypot(dx, dy) < 45) {
+        state.isDraggingAstro = true;
+        state.dragOffset.x = dx;
+        state.dragOffset.y = dy;
+      } else {
+        pulseRipples.push({ x: mx, y: my, radius: 5, alpha: 0.8 });
+        playSound('click');
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (state.isDraggingAstro) {
+        const rect = canvas.getBoundingClientRect();
+        state.astroPos.x = e.clientX - rect.left - state.dragOffset.x;
+        state.astroPos.y = e.clientY - rect.top - state.dragOffset.y;
+        state.astroTarget.x = state.astroPos.x;
+        state.astroTarget.y = state.astroPos.y;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (state.isDraggingAstro) {
+        state.isDraggingAstro = false;
+        playSound('boost');
+      }
+    });
+
+    // Touch Support
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.touches[0].clientX - rect.left;
+        const my = e.touches[0].clientY - rect.top;
+        const dx = mx - state.astroPos.x;
+        const dy = my - state.astroPos.y;
+
+        if (Math.hypot(dx, dy) < 50) {
+          state.isDraggingAstro = true;
+          state.dragOffset.x = dx;
+          state.dragOffset.y = dy;
+        } else {
+          pulseRipples.push({ x: mx, y: my, radius: 5, alpha: 0.8 });
+          playSound('click');
+        }
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (state.isDraggingAstro && e.touches.length === 1) {
+        const rect = canvas.getBoundingClientRect();
+        state.astroPos.x = e.touches[0].clientX - rect.left - state.dragOffset.x;
+        state.astroPos.y = e.touches[0].clientY - rect.top - state.dragOffset.y;
+        state.astroTarget.x = state.astroPos.x;
+        state.astroTarget.y = state.astroPos.y;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      state.isDraggingAstro = false;
+    });
+
+    // INIT ON WINDOW LOAD
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      syncUI();
+      animate();
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+  </script>
+</body>
+</html>
